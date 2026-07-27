@@ -3,7 +3,7 @@ require_once __DIR__ . '/../includes/auth.php';
 require_role('student');
 $pdo = db();
 
-$student = get_student_by_user($_SESSION['user_id']);
+/*$student = get_student_by_user($_SESSION['user_id']);
 if (!$student) { header('Location: ' . base_url('logout.php')); exit; }
 $sid = $student['id'];
 
@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         set_flash('success', 'Complaint submitted. Admin will review it shortly.');
         header('Location: ' . base_url('student/complaints.php')); exit;
     }
-}
+}*/
 
 $complaints = $pdo->prepare("SELECT * FROM complaints WHERE student_id=? ORDER BY created_at DESC");
 $complaints->execute([$sid]);
