@@ -3,7 +3,7 @@ require_once __DIR__ . '/../includes/auth.php';
 require_role('student');
 $pdo = db();
 
-/*$student = get_student_by_user($_SESSION['user_id']);
+$student = get_student_by_user($_SESSION['user_id']);
 if (!$student) { header('Location: ' . base_url('logout.php')); exit; }
 $sid = $student['id'];
 
@@ -29,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         set_flash('success', 'Visitor checked out.');
         header('Location: ' . base_url('student/visitors.php')); exit;
     }
-}*/
+}
 
 $visitors = $pdo->prepare("SELECT * FROM visitors WHERE student_id=? ORDER BY check_in DESC");
 $visitors->execute([$sid]);
