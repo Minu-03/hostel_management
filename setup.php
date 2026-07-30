@@ -1,44 +1,43 @@
 <?php
-// ============================================================
-// Setup Script - Run this ONCE after importing schema.sql
-// It generates a proper password hash for the default admin
-// and lets you verify the database connection.
-// ============================================================
+// Setup Script: Run once to set up the default admin account.
 
 require_once __DIR__ . '/config/database.php';
 
 echo "<h2>Hostel Management System - Setup</h2>";
 
-// 1. Test connection
+// 1. Connect to Database
 try {
     $pdo = db();
-    echo "<p style='color:green;'>Database connection: OK</p>";
+    echo "<p style='color: green;'>✓ Database connected successfully.</p>";
 } catch (Exception $e) {
-    echo "<p style='color:red;'>Database connection failed: " . htmlspecialchars($e->getMessage()) . "</p>";
-    echo "<p>Make sure you have imported <code>database/schema.sql</code> into MySQL first.</p>";
+    echo "<p style='color: red;'>✕ Database connection failed: " . htmlspecialchars($e->getMessage()) . "</p>";
+    echo "<p>Please ensure you have imported <code>database/schema.sql</code> first.</p>";
     exit;
 }
 
-// 2. Set the admin password hash correctly
+// 2. Setup Admin Credentials
 $adminEmail = 'admin@hostel.com';
 $adminPass  = 'admin123';
-$hash = password_hash($adminPass, PASSWORD_DEFAULT);
+$hashedPass = password_hash($adminPass, PASSWORD_DEFAULT);
 
-$stmt = $pdo->prepare("UPDATE users SET password = ? WHERE email = ?");
-$stmt->execute([$hash, $adminEmail]);
+// 3. Create or Update Admin Account
+$query = "INSERT INTO users (full_name, email, password, role, status)
+          VALUES ('System Administrator', ?, ?, 'admin', 'active')
+          ON DUPLICATE KEY UPDATE password = VALUES(password)";
 
-if ($stmt->rowCount() > 0) {
-    echo "<p style='color:green;'>Admin password set successfully.</p>";
-} else {
-    // Admin row might not exist yet - create it
-    $stmt = $pdo->prepare("INSERT INTO users (full_name, email, password, role, status)
-                           VALUES ('System Administrator', ?, ?, 'admin', 'active')
-                           ON DUPLICATE KEY UPDATE password = VALUES(password)");
-    $stmt->execute([$adminEmail, $hash]);
-    echo "<p style='color:green;'>Admin account created/updated successfully.</p>";
-}
+$stmt = $pdo->prepare($query);
+$stmt->execute([$adminEmail, $hashedPass]);
 
-echo "<h3>Default Login Credentials</h3>";
-echo "<p><strong>Email:</strong> admin@hostel.com<br><strong>Password:</strong> admin123</p>";
-echo "<p style='color:orange;'><strong>Important:</strong> Delete this file (setup.php) after running it once for security.</p>";
-echo "<p><a href='index.php'>Go to Login Page</a></p>";
+echo "<p style='color: green;'>✓ Admin account is ready.</p>";
+
+// 4. Show Login Info & Security Reminder
+?>
+<h3>Default Login Credentials</h3>
+<p><strong>Email:</strong> admin@hostel.com</p>
+<p><strong>Password:</strong> admin123</p>
+
+<p style="color: orange;">
+    <strong>Warning:</strong> Delete this file (<code>setup.php</code>) immediately after setup for security!
+</p>
+
+<p><a href="index.php">Go to Login Page &rarr;</a></p>
