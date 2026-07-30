@@ -1,3 +1,6 @@
 <?php
-echo password_hash("MyNewPassword123", PASSWORD_DEFAULT);
-?>
+
+$password = 'MyNewPassword123';
+$hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+
+echo $hashedPassword;
