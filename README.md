@@ -132,3 +132,8 @@ hostel_management/
 4. File complaints for maintenance or other issues
 5. Check in visitors when they arrive
 6. Update your profile and change your password
+
+
+## Test Update
+
+This is a test commit to verify GitHub push.
