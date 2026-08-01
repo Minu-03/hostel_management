@@ -1,7 +1,7 @@
 <?php
 require_once 'includes/auth.php';
 
-// If already logged in, redirect to appropriate dashboard
+// If already logged in, redirect to the appropriate dashboard
 if (is_logged_in()) {
     if ($_SESSION['role'] === 'admin') {
         header('Location: ' . base_url('admin/dashboard.php'));
@@ -12,10 +12,20 @@ if (is_logged_in()) {
 }
 
 $error = '';
+$typedEmail = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email    = trim($_POST['email'] ?? '');
-    $password = $_POST['password'] ?? '';
+
+    $email = '';
+    if (isset($_POST['email'])) {
+        $email = trim($_POST['email']);
+    }
+    $typedEmail = $email;
+
+    $password = '';
+    if (isset($_POST['password'])) {
+        $password = $_POST['password'];
+    }
 
     if (empty($email) || empty($password)) {
         $error = 'Please enter both email and password.';
@@ -56,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <label for="email">Email Address</label>
                 <input type="email" id="email" name="email" class="form-control"
                        placeholder="you@example.com" required autofocus
-                       value="<?= e($_POST['email'] ?? '') ?>">
+                       value="<?= e($typedEmail) ?>">
             </div>
             <div class="form-group">
                 <label for="password">Password</label>
