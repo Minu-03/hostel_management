@@ -3,136 +3,125 @@ require_once __DIR__ . '/../includes/auth.php';
 require_role('admin');
 $pdo = db();
 
-// ----- Handle actions -----
+// ----- Handle form actions -----
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $action = $_POST['action'] ?? '';
+    $action = $_POST['action'];
 
     if ($action === 'create') {
-        $full_name = trim($_POST['full_name'] ?? '');
-        $email     = trim($_POST['email'] ?? '');
-        $password  = $_POST['password'] ?? 'student123';
-        $student_number = trim($_POST['student_number'] ?? '');
-        $gender    = $_POST['gender'] ?? 'male';
-        $course    = trim($_POST['course'] ?? '');
-        $year      = (int)($_POST['year_of_study'] ?? 0);
-        $phone     = trim($_POST['phone'] ?? '');
-        $address   = trim($_POST['address'] ?? '');
-        $guardian_name  = trim($_POST['guardian_name'] ?? '');
-        $guardian_phone = trim($_POST['guardian_phone'] ?? '');
+        $room_number = trim($_POST['room_number']);
+        $block = trim($_POST['block']);
+        $floor_number = (int)$_POST['floor_number'];
+        $capacity = (int)$_POST['capacity'];
+        $room_type = $_POST['room_type'];
+        $monthly_fee = (float)$_POST['monthly_fee'];
+        $status = $_POST['status'];
+        $description = trim($_POST['description']);
 
-        try {
-            $pdo->beginTransaction();
-            // Create user
-            $stmt = $pdo->prepare("INSERT INTO users (full_name, email, password, role, phone, status)
-                                   VALUES (?, ?, ?, 'student', ?, 'active')");
-            $stmt->execute([$full_name, $email, password_hash($password, PASSWORD_DEFAULT), $phone]);
-            $user_id = $pdo->lastInsertId();
-            // Create student
-            $stmt = $pdo->prepare("INSERT INTO students
-                (user_id, student_number, full_name, gender, course, year_of_study, phone, email, address, guardian_name, guardian_phone, status)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,'checked_out')");
-            $stmt->execute([$user_id, $student_number, $full_name, $gender, $course, $year, $phone, $email, $address, $guardian_name, $guardian_phone]);
-            $pdo->commit();
-            set_flash('success', 'Student added successfully.');
-        } catch (PDOException $ex) {
-            $pdo->rollBack();
-            set_flash('error', 'Could not add student: ' . $ex->getMessage());
-        }
-        header('Location: ' . base_url('admin/students.php')); exit;
+        $stmt = $pdo->prepare("INSERT INTO rooms (room_number, block, floor_number, capacity, room_type, monthly_fee, status, description)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$room_number, $block, $floor_number, $capacity, $room_type, $monthly_fee, $status, $description]);
+
+        set_flash('success', 'Room added successfully.');
+        header('Location: ' . base_url('admin/rooms.php'));
+        exit;
     }
 
     if ($action === 'update') {
-        $id = (int)($_POST['id'] ?? 0);
-        $full_name = trim($_POST['full_name'] ?? '');
-        $student_number = trim($_POST['student_number'] ?? '');
-        $gender    = $_POST['gender'] ?? 'male';
-        $course    = trim($_POST['course'] ?? '');
-        $year      = (int)($_POST['year_of_study'] ?? 0);
-        $phone     = trim($_POST['phone'] ?? '');
-        $email     = trim($_POST['email'] ?? '');
-        $address   = trim($_POST['address'] ?? '');
-        $guardian_name  = trim($_POST['guardian_name'] ?? '');
-        $guardian_phone = trim($_POST['guardian_phone'] ?? '');
-        $status    = $_POST['status'] ?? 'checked_out';
+        $id = (int)$_POST['id'];
+        $room_number = trim($_POST['room_number']);
+        $block = trim($_POST['block']);
+        $floor_number = (int)$_POST['floor_number'];
+        $capacity = (int)$_POST['capacity'];
+        $room_type = $_POST['room_type'];
+        $monthly_fee = (float)$_POST['monthly_fee'];
+        $status = $_POST['status'];
+        $description = trim($_POST['description']);
 
-        $stmt = $pdo->prepare("UPDATE students SET full_name=?, student_number=?, gender=?, course=?, year_of_study=?, phone=?, email=?, address=?, guardian_name=?, guardian_phone=?, status=? WHERE id=?");
-        $stmt->execute([$full_name, $student_number, $gender, $course, $year, $phone, $email, $address, $guardian_name, $guardian_phone, $status, $id]);
-        set_flash('success', 'Student updated successfully.');
-        header('Location: ' . base_url('admin/students.php')); exit;
-    }
+        $stmt = $pdo->prepare("UPDATE rooms SET
+            room_number=?, block=?, floor_number=?, capacity=?, room_type=?, monthly_fee=?, status=?, description=?
+            WHERE id=?");
+        $stmt->execute([$room_number, $block, $floor_number, $capacity, $room_type, $monthly_fee, $status, $description, $id]);
 
-    if ($action === 'checkin') {
-        $id = (int)($_POST['id'] ?? 0);
-        $pdo->prepare("UPDATE students SET status='checked_in', check_in_date=CURDATE(), check_out_date=NULL WHERE id=?")->execute([$id]);
-        set_flash('success', 'Student checked in.');
-        header('Location: ' . base_url('admin/students.php')); exit;
-    }
-
-    if ($action === 'checkout') {
-        $id = (int)($_POST['id'] ?? 0);
-        $pdo->prepare("UPDATE students SET status='checked_out', check_out_date=CURDATE() WHERE id=?")->execute([$id]);
-        set_flash('success', 'Student checked out.');
-        header('Location: ' . base_url('admin/students.php')); exit;
+        set_flash('success', 'Room updated successfully.');
+        header('Location: ' . base_url('admin/rooms.php'));
+        exit;
     }
 
     if ($action === 'delete') {
-        $id = (int)($_POST['id'] ?? 0);
-        // Get user_id
-        $row = $pdo->prepare("SELECT user_id FROM students WHERE id=?");
-        $row->execute([$id]);
-        $userId = $row->fetchColumn();
-        if ($userId) {
-            $pdo->prepare("DELETE FROM users WHERE id=?")->execute([$userId]); // cascades to student
-        }
-        set_flash('success', 'Student deleted.');
-        header('Location: ' . base_url('admin/students.php')); exit;
+        $id = (int)$_POST['id'];
+        $stmt = $pdo->prepare("DELETE FROM rooms WHERE id=?");
+        $stmt->execute([$id]);
+
+        set_flash('success', 'Room deleted.');
+        header('Location: ' . base_url('admin/rooms.php'));
+        exit;
     }
 }
 
-// ----- Fetch students -----
-$students = $pdo->query("SELECT * FROM students ORDER BY created_at DESC")->fetchAll();
+// ----- Get all rooms for the table -----
+$rooms = array();
+$result = $pdo->query("SELECT * FROM rooms ORDER BY room_number");
+while ($row = $result->fetch()) {
+    $rooms[] = $row;
+}
 
-$pageTitle = 'Student Management';
-$activePage = 'students';
+$pageTitle = 'Room Management';
+$activePage = 'rooms';
 require_once __DIR__ . '/../includes/header.php';
 ?>
 <div class="toolbar">
     <div class="toolbar-left">
-        <div class="search-box">
-            <input type="text" placeholder="Search students..." data-table-search="studentsTable">
-        </div>
+        <div class="search-box"><input type="text" placeholder="Search rooms..." data-table-search="roomsTable"></div>
     </div>
     <div class="toolbar-right">
-        <button class="btn btn-primary" onclick="openModal('addModal')">+ Add Student</button>
+        <button class="btn btn-primary" onclick="openModal('addModal')">+ Add Room</button>
     </div>
 </div>
 
 <div class="card">
     <div class="table-wrap">
-        <table class="data-table" id="studentsTable">
-            <thead><tr><th>Student No.</th><th>Name</th><th>Gender</th><th>Course</th><th>Phone</th><th>Status</th><th>Actions</th></tr></thead>
+        <table class="data-table" id="roomsTable">
+            <thead><tr><th>Room No.</th><th>Block</th><th>Floor</th><th>Type</th><th>Capacity</th><th>Occupied</th><th>Monthly Fee</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody>
-            <?php if (empty($students)): ?>
-                <tr><td colspan="7"><div class="empty-state"><div class="icon">&#128100;</div><h4>No students yet</h4><p>Click "Add Student" to create one.</p></div></td></tr>
-            <?php else: foreach ($students as $s): ?>
+            <?php if (count($rooms) === 0): ?>
+                <tr><td colspan="9"><div class="empty-state"><div class="icon">&#127968;</div><h4>No rooms yet</h4><p>Add a room to get started.</p></div></td></tr>
+            <?php else: ?>
+                <?php foreach ($rooms as $r): ?>
                 <tr>
-                    <td><?= e($s['student_number']) ?></td>
-                    <td><?= e($s['full_name']) ?></td>
-                    <td><?= ucfirst(e($s['gender'])) ?></td>
-                    <td><?= e($s['course'] ?: '-') ?></td>
-                    <td><?= e($s['phone'] ?: '-') ?></td>
-                    <td><span class="badge <?= $s['status']==='checked_in'?'badge-success':'badge-neutral' ?>"><?= e(str_replace('_',' ', $s['status'])) ?></span></td>
+                    <td><?= e($r['room_number']) ?></td>
+                    <td>
+                        <?php if ($r['block']) { echo e($r['block']); } else { echo '-'; } ?>
+                    </td>
+                    <td>
+                        <?php if ($r['floor_number']) { echo e($r['floor_number']); } else { echo '-'; } ?>
+                    </td>
+                    <td><?= ucfirst(e($r['room_type'])) ?></td>
+                    <td><?= $r['capacity'] ?></td>
+                    <td><?= $r['occupied'] ?></td>
+                    <td>$<?= number_format($r['monthly_fee'], 2) ?></td>
+                    <td>
+                        <?php
+                        if ($r['status'] === 'available') {
+                            $statusClass = 'badge-success';
+                        } elseif ($r['status'] === 'full') {
+                            $statusClass = 'badge-error';
+                        } else {
+                            $statusClass = 'badge-warning';
+                        }
+                        ?>
+                        <span class="badge <?= $statusClass ?>"><?= e($r['status']) ?></span>
+                    </td>
                     <td class="actions">
-                        <button class="btn btn-outline btn-sm" onclick="editStudent(<?= htmlspecialchars(json_encode($s), ENT_QUOTES) ?>)">Edit</button>
-                        <?php if ($s['status'] === 'checked_out'): ?>
-                            <form method="POST" style="display:inline"><input type="hidden" name="action" value="checkin"><input type="hidden" name="id" value="<?= $s['id'] ?>"><button class="btn btn-success btn-sm">Check-In</button></form>
-                        <?php else: ?>
-                            <form method="POST" style="display:inline"><input type="hidden" name="action" value="checkout"><input type="hidden" name="id" value="<?= $s['id'] ?>"><button class="btn btn-warning btn-sm">Check-Out</button></form>
-                        <?php endif; ?>
-                        <form method="POST" style="display:inline" data-confirm="Delete this student?"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= $s['id'] ?>"><button class="btn btn-danger btn-sm">Delete</button></form>
+                        <button class="btn btn-outline btn-sm" onclick='editRoom(<?= json_encode($r, JSON_HEX_APOS|JSON_HEX_QUOT) ?>)'>Edit</button>
+                        <form method="POST" style="display:inline" data-confirm="Delete this room?">
+                            <input type="hidden" name="action" value="delete">
+                            <input type="hidden" name="id" value="<?= $r['id'] ?>">
+                            <button class="btn btn-danger btn-sm">Delete</button>
+                        </form>
                     </td>
                 </tr>
-            <?php endforeach; endif; ?>
+                <?php endforeach; ?>
+            <?php endif; ?>
             </tbody>
         </table>
     </div>
@@ -141,35 +130,28 @@ require_once __DIR__ . '/../includes/header.php';
 <!-- Add Modal -->
 <div class="modal-overlay" id="addModal">
     <div class="modal modal-lg">
-        <div class="modal-header"><h3>Add New Student</h3><button class="modal-close" onclick="closeModal('addModal')">&times;</button></div>
+        <div class="modal-header"><h3>Add New Room</h3><button class="modal-close" onclick="closeModal('addModal')">&times;</button></div>
         <form method="POST" action="">
             <div class="modal-body">
                 <input type="hidden" name="action" value="create">
                 <div class="form-row">
-                    <div class="form-group"><label>Student Number *</label><input type="text" name="student_number" class="form-control" required></div>
-                    <div class="form-group"><label>Full Name *</label><input type="text" name="full_name" class="form-control" required></div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group"><label>Email (login) *</label><input type="email" name="email" class="form-control" required></div>
-                    <div class="form-group"><label>Password</label><input type="text" name="password" class="form-control" value="student123"></div>
+                    <div class="form-group"><label>Room Number *</label><input type="text" name="room_number" class="form-control" required></div>
+                    <div class="form-group"><label>Block</label><input type="text" name="block" class="form-control"></div>
                 </div>
                 <div class="form-row-3">
-                    <div class="form-group"><label>Gender</label><select name="gender"><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option></select></div>
-                    <div class="form-group"><label>Course</label><input type="text" name="course" class="form-control"></div>
-                    <div class="form-group"><label>Year of Study</label><input type="number" name="year_of_study" class="form-control" min="1" max="6"></div>
+                    <div class="form-group"><label>Floor</label><input type="number" name="floor_number" class="form-control" min="0"></div>
+                    <div class="form-group"><label>Capacity *</label><input type="number" name="capacity" class="form-control" value="1" min="1" required></div>
+                    <div class="form-group"><label>Monthly Fee *</label><input type="number" name="monthly_fee" class="form-control" value="0.00" step="0.01" required></div>
                 </div>
                 <div class="form-row">
-                    <div class="form-group"><label>Phone</label><input type="text" name="phone" class="form-control"></div>
-                    <div class="form-group"><label>Address</label><input type="text" name="address" class="form-control"></div>
+                    <div class="form-group"><label>Room Type</label><select name="room_type"><option value="single">Single</option><option value="double">Double</option><option value="triple">Triple</option><option value="dormitory">Dormitory</option></select></div>
+                    <div class="form-group"><label>Status</label><select name="status"><option value="available">Available</option><option value="maintenance">Maintenance</option></select></div>
                 </div>
-                <div class="form-row">
-                    <div class="form-group"><label>Guardian Name</label><input type="text" name="guardian_name" class="form-control"></div>
-                    <div class="form-group"><label>Guardian Phone</label><input type="text" name="guardian_phone" class="form-control"></div>
-                </div>
+                <div class="form-group"><label>Description</label><textarea name="description" class="form-control"></textarea></div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline" onclick="closeModal('addModal')">Cancel</button>
-                <button type="submit" class="btn btn-primary">Add Student</button>
+                <button type="submit" class="btn btn-primary">Add Room</button>
             </div>
         </form>
     </div>
@@ -178,32 +160,25 @@ require_once __DIR__ . '/../includes/header.php';
 <!-- Edit Modal -->
 <div class="modal-overlay" id="editModal">
     <div class="modal modal-lg">
-        <div class="modal-header"><h3>Edit Student</h3><button class="modal-close" onclick="closeModal('editModal')">&times;</button></div>
+        <div class="modal-header"><h3>Edit Room</h3><button class="modal-close" onclick="closeModal('editModal')">&times;</button></div>
         <form method="POST" action="">
             <div class="modal-body">
                 <input type="hidden" name="action" value="update">
                 <input type="hidden" name="id" id="edit_id">
                 <div class="form-row">
-                    <div class="form-group"><label>Student Number *</label><input type="text" name="student_number" id="edit_student_number" class="form-control" required></div>
-                    <div class="form-group"><label>Full Name *</label><input type="text" name="full_name" id="edit_full_name" class="form-control" required></div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group"><label>Gender</label><select name="gender" id="edit_gender"><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option></select></div>
-                    <div class="form-group"><label>Status</label><select name="status" id="edit_status"><option value="checked_out">Checked Out</option><option value="checked_in">Checked In</option></select></div>
+                    <div class="form-group"><label>Room Number *</label><input type="text" name="room_number" id="edit_room_number" class="form-control" required></div>
+                    <div class="form-group"><label>Block</label><input type="text" name="block" id="edit_block" class="form-control"></div>
                 </div>
                 <div class="form-row-3">
-                    <div class="form-group"><label>Course</label><input type="text" name="course" id="edit_course" class="form-control"></div>
-                    <div class="form-group"><label>Year</label><input type="number" name="year_of_study" id="edit_year_of_study" class="form-control" min="1" max="6"></div>
-                    <div class="form-group"><label>Phone</label><input type="text" name="phone" id="edit_phone" class="form-control"></div>
+                    <div class="form-group"><label>Floor</label><input type="number" name="floor_number" id="edit_floor_number" class="form-control" min="0"></div>
+                    <div class="form-group"><label>Capacity *</label><input type="number" name="capacity" id="edit_capacity" class="form-control" min="1" required></div>
+                    <div class="form-group"><label>Monthly Fee *</label><input type="number" name="monthly_fee" id="edit_monthly_fee" class="form-control" step="0.01" required></div>
                 </div>
                 <div class="form-row">
-                    <div class="form-group"><label>Email</label><input type="email" name="email" id="edit_email" class="form-control"></div>
-                    <div class="form-group"><label>Address</label><input type="text" name="address" id="edit_address" class="form-control"></div>
+                    <div class="form-group"><label>Room Type</label><select name="room_type" id="edit_room_type"><option value="single">Single</option><option value="double">Double</option><option value="triple">Triple</option><option value="dormitory">Dormitory</option></select></div>
+                    <div class="form-group"><label>Status</label><select name="status" id="edit_status"><option value="available">Available</option><option value="full">Full</option><option value="maintenance">Maintenance</option></select></div>
                 </div>
-                <div class="form-row">
-                    <div class="form-group"><label>Guardian Name</label><input type="text" name="guardian_name" id="edit_guardian_name" class="form-control"></div>
-                    <div class="form-group"><label>Guardian Phone</label><input type="text" name="guardian_phone" id="edit_guardian_phone" class="form-control"></div>
-                </div>
+                <div class="form-group"><label>Description</label><textarea name="description" id="edit_description" class="form-control"></textarea></div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline" onclick="closeModal('editModal')">Cancel</button>
@@ -214,19 +189,16 @@ require_once __DIR__ . '/../includes/header.php';
 </div>
 
 <script>
-function editStudent(s) {
-    document.getElementById('edit_id').value = s.id;
-    document.getElementById('edit_student_number').value = s.student_number;
-    document.getElementById('edit_full_name').value = s.full_name;
-    document.getElementById('edit_gender').value = s.gender;
-    document.getElementById('edit_status').value = s.status;
-    document.getElementById('edit_course').value = s.course || '';
-    document.getElementById('edit_year_of_study').value = s.year_of_study || '';
-    document.getElementById('edit_phone').value = s.phone || '';
-    document.getElementById('edit_email').value = s.email || '';
-    document.getElementById('edit_address').value = s.address || '';
-    document.getElementById('edit_guardian_name').value = s.guardian_name || '';
-    document.getElementById('edit_guardian_phone').value = s.guardian_phone || '';
+function editRoom(r) {
+    document.getElementById('edit_id').value = r.id;
+    document.getElementById('edit_room_number').value = r.room_number;
+    document.getElementById('edit_block').value = r.block || '';
+    document.getElementById('edit_floor_number').value = r.floor_number || '';
+    document.getElementById('edit_capacity').value = r.capacity;
+    document.getElementById('edit_monthly_fee').value = r.monthly_fee;
+    document.getElementById('edit_room_type').value = r.room_type;
+    document.getElementById('edit_status').value = r.status;
+    document.getElementById('edit_description').value = r.description || '';
     openModal('editModal');
 }
 </script>
