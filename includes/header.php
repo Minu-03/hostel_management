@@ -2,9 +2,36 @@
 require_once __DIR__ . '/auth.php';
 
 $currentUser = current_user();
-$role = $currentUser['role'] ?? 'student';
-$pageTitle = $pageTitle ?? 'Hostel Management System';
-$activePage = $activePage ?? '';
+
+$role = 'student';
+if (isset($currentUser['role'])) {
+    $role = $currentUser['role'];
+}
+
+if (!isset($pageTitle)) {
+    $pageTitle = 'Hostel Management System';
+}
+
+if (!isset($activePage)) {
+    $activePage = '';
+}
+
+// Works out whether a nav link is the current page, and returns
+// the CSS class needed to highlight it (or an empty string if not).
+function nav_class($activePage, $page) {
+    if ($activePage === $page) {
+        return 'active';
+    } else {
+        return '';
+    }
+}
+
+// Works out the single-letter avatar shown in the top-right corner
+$userName = 'Guest';
+if (isset($currentUser['name'])) {
+    $userName = $currentUser['name'];
+}
+$userInitial = strtoupper(substr($userName, 0, 1));
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -24,22 +51,22 @@ $activePage = $activePage ?? '';
         </div>
         <nav class="sidebar-nav">
             <?php if ($role === 'admin'): ?>
-                <a href="<?= base_url('admin/dashboard.php') ?>"     class="nav-link <?= $activePage==='dashboard'?'active':'' ?>"><span class="nav-icon">&#8962;</span> Dashboard</a>
-                <a href="<?= base_url('admin/students.php') ?>"       class="nav-link <?= $activePage==='students'?'active':'' ?>"><span class="nav-icon">&#128100;</span> Students</a>
-                <a href="<?= base_url('admin/rooms.php') ?>"          class="nav-link <?= $activePage==='rooms'?'active':'' ?>"><span class="nav-icon">&#127968;</span> Rooms</a>
-                <a href="<?= base_url('admin/allocations.php') ?>"    class="nav-link <?= $activePage==='allocations'?'active':'' ?>"><span class="nav-icon">&#128203;</span> Allocations</a>
-                <a href="<?= base_url('admin/payments.php') ?>"      class="nav-link <?= $activePage==='payments'?'active':'' ?>"><span class="nav-icon">&#128176;</span> Payments</a>
-                <a href="<?= base_url('admin/complaints.php') ?>"     class="nav-link <?= $activePage==='complaints'?'active':'' ?>"><span class="nav-icon">&#128172;</span> Complaints</a>
-                <a href="<?= base_url('admin/visitors.php') ?>"       class="nav-link <?= $activePage==='visitors'?'active':'' ?>"><span class="nav-icon">&#128101;</span> Visitors</a>
-                <a href="<?= base_url('admin/reports.php') ?>"        class="nav-link <?= $activePage==='reports'?'active':'' ?>"><span class="nav-icon">&#128202;</span> Reports</a>
-                <a href="<?= base_url('help.php') ?>"                 class="nav-link <?= $activePage==='help'?'active':'' ?>"><span class="nav-icon">&#10067;</span> Help</a>
+                <a href="<?= base_url('admin/dashboard.php') ?>" class="nav-link <?= nav_class($activePage, 'dashboard') ?>"><span class="nav-icon">&#8962;</span> Dashboard</a>
+                <a href="<?= base_url('admin/students.php') ?>" class="nav-link <?= nav_class($activePage, 'students') ?>"><span class="nav-icon">&#128100;</span> Students</a>
+                <a href="<?= base_url('admin/rooms.php') ?>" class="nav-link <?= nav_class($activePage, 'rooms') ?>"><span class="nav-icon">&#127968;</span> Rooms</a>
+                <a href="<?= base_url('admin/allocations.php') ?>" class="nav-link <?= nav_class($activePage, 'allocations') ?>"><span class="nav-icon">&#128203;</span> Allocations</a>
+                <a href="<?= base_url('admin/payments.php') ?>" class="nav-link <?= nav_class($activePage, 'payments') ?>"><span class="nav-icon">&#128176;</span> Payments</a>
+                <a href="<?= base_url('admin/complaints.php') ?>" class="nav-link <?= nav_class($activePage, 'complaints') ?>"><span class="nav-icon">&#128172;</span> Complaints</a>
+                <a href="<?= base_url('admin/visitors.php') ?>" class="nav-link <?= nav_class($activePage, 'visitors') ?>"><span class="nav-icon">&#128101;</span> Visitors</a>
+                <a href="<?= base_url('admin/reports.php') ?>" class="nav-link <?= nav_class($activePage, 'reports') ?>"><span class="nav-icon">&#128202;</span> Reports</a>
+                <a href="<?= base_url('help.php') ?>" class="nav-link <?= nav_class($activePage, 'help') ?>"><span class="nav-icon">&#10067;</span> Help</a>
             <?php else: ?>
-                <a href="<?= base_url('student/dashboard.php') ?>"   class="nav-link <?= $activePage==='dashboard'?'active':'' ?>"><span class="nav-icon">&#8962;</span> Dashboard</a>
-                <a href="<?= base_url('student/profile.php') ?>"     class="nav-link <?= $activePage==='profile'?'active':'' ?>"><span class="nav-icon">&#128100;</span> My Profile</a>
-                <a href="<?= base_url('student/payments.php') ?>"    class="nav-link <?= $activePage==='payments'?'active':'' ?>"><span class="nav-icon">&#128176;</span> My Payments</a>
-                <a href="<?= base_url('student/complaints.php') ?>"  class="nav-link <?= $activePage==='complaints'?'active':'' ?>"><span class="nav-icon">&#128172;</span> My Complaints</a>
-                <a href="<?= base_url('student/visitors.php') ?>"    class="nav-link <?= $activePage==='visitors'?'active':'' ?>"><span class="nav-icon">&#128101;</span> My Visitors</a>
-                <a href="<?= base_url('help.php') ?>"                class="nav-link <?= $activePage==='help'?'active':'' ?>"><span class="nav-icon">&#10067;</span> Help</a>
+                <a href="<?= base_url('student/dashboard.php') ?>" class="nav-link <?= nav_class($activePage, 'dashboard') ?>"><span class="nav-icon">&#8962;</span> Dashboard</a>
+                <a href="<?= base_url('student/profile.php') ?>" class="nav-link <?= nav_class($activePage, 'profile') ?>"><span class="nav-icon">&#128100;</span> My Profile</a>
+                <a href="<?= base_url('student/payments.php') ?>" class="nav-link <?= nav_class($activePage, 'payments') ?>"><span class="nav-icon">&#128176;</span> My Payments</a>
+                <a href="<?= base_url('student/complaints.php') ?>" class="nav-link <?= nav_class($activePage, 'complaints') ?>"><span class="nav-icon">&#128172;</span> My Complaints</a>
+                <a href="<?= base_url('student/visitors.php') ?>" class="nav-link <?= nav_class($activePage, 'visitors') ?>"><span class="nav-icon">&#128101;</span> My Visitors</a>
+                <a href="<?= base_url('help.php') ?>" class="nav-link <?= nav_class($activePage, 'help') ?>"><span class="nav-icon">&#10067;</span> Help</a>
             <?php endif; ?>
         </nav>
         <div class="sidebar-footer">
@@ -55,9 +82,9 @@ $activePage = $activePage ?? '';
                 <h2><?= e($pageTitle) ?></h2>
             </div>
             <div class="topbar-user">
-                <div class="user-avatar"><?= strtoupper(substr($currentUser['name'] ?? 'U', 0, 1)) ?></div>
+                <div class="user-avatar"><?= e($userInitial) ?></div>
                 <div class="user-meta">
-                    <span class="user-name"><?= e($currentUser['name'] ?? 'Guest') ?></span>
+                    <span class="user-name"><?= e($userName) ?></span>
                     <span class="user-role"><?= ucfirst($role) ?></span>
                 </div>
             </div>
