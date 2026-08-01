@@ -3,51 +3,67 @@ require_once __DIR__ . '/../includes/auth.php';
 require_role('admin');
 $pdo = db();
 
+// ----- Handle form actions -----
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $action = $_POST['action'] ?? '';
+    $action = $_POST['action'];
 
     if ($action === 'create') {
+        $room_number = trim($_POST['room_number']);
+        $block = trim($_POST['block']);
+        $floor_number = (int)$_POST['floor_number'];
+        $capacity = (int)$_POST['capacity'];
+        $room_type = $_POST['room_type'];
+        $monthly_fee = (float)$_POST['monthly_fee'];
+        $status = $_POST['status'];
+        $description = trim($_POST['description']);
+
         $stmt = $pdo->prepare("INSERT INTO rooms (room_number, block, floor_number, capacity, room_type, monthly_fee, status, description)
-                               VALUES (?,?,?,?,?,?,?,?)");
-        $stmt->execute([
-            trim($_POST['room_number']),
-            trim($_POST['block'] ?? ''),
-            (int)($_POST['floor_number'] ?? 0),
-            (int)($_POST['capacity'] ?? 1),
-            $_POST['room_type'] ?? 'single',
-            (float)($_POST['monthly_fee'] ?? 0),
-            $_POST['status'] ?? 'available',
-            trim($_POST['description'] ?? '')
-        ]);
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$room_number, $block, $floor_number, $capacity, $room_type, $monthly_fee, $status, $description]);
+
         set_flash('success', 'Room added successfully.');
-        header('Location: ' . base_url('admin/rooms.php')); exit;
+        header('Location: ' . base_url('admin/rooms.php'));
+        exit;
     }
 
     if ($action === 'update') {
-        $stmt = $pdo->prepare("UPDATE rooms SET room_number=?, block=?, floor_number=?, capacity=?, room_type=?, monthly_fee=?, status=?, description=? WHERE id=?");
-        $stmt->execute([
-            trim($_POST['room_number']),
-            trim($_POST['block'] ?? ''),
-            (int)($_POST['floor_number'] ?? 0),
-            (int)($_POST['capacity'] ?? 1),
-            $_POST['room_type'] ?? 'single',
-            (float)($_POST['monthly_fee'] ?? 0),
-            $_POST['status'] ?? 'available',
-            trim($_POST['description'] ?? ''),
-            (int)($_POST['id'] ?? 0)
-        ]);
+        $id = (int)$_POST['id'];
+        $room_number = trim($_POST['room_number']);
+        $block = trim($_POST['block']);
+        $floor_number = (int)$_POST['floor_number'];
+        $capacity = (int)$_POST['capacity'];
+        $room_type = $_POST['room_type'];
+        $monthly_fee = (float)$_POST['monthly_fee'];
+        $status = $_POST['status'];
+        $description = trim($_POST['description']);
+
+        $stmt = $pdo->prepare("UPDATE rooms SET
+            room_number=?, block=?, floor_number=?, capacity=?, room_type=?, monthly_fee=?, status=?, description=?
+            WHERE id=?");
+        $stmt->execute([$room_number, $block, $floor_number, $capacity, $room_type, $monthly_fee, $status, $description, $id]);
+
         set_flash('success', 'Room updated successfully.');
-        header('Location: ' . base_url('admin/rooms.php')); exit;
+        header('Location: ' . base_url('admin/rooms.php'));
+        exit;
     }
 
     if ($action === 'delete') {
-        $pdo->prepare("DELETE FROM rooms WHERE id=?")->execute([(int)($_POST['id'] ?? 0)]);
+        $id = (int)$_POST['id'];
+        $stmt = $pdo->prepare("DELETE FROM rooms WHERE id=?");
+        $stmt->execute([$id]);
+
         set_flash('success', 'Room deleted.');
-        header('Location: ' . base_url('admin/rooms.php')); exit;
+        header('Location: ' . base_url('admin/rooms.php'));
+        exit;
     }
 }
 
-$rooms = $pdo->query("SELECT * FROM rooms ORDER BY room_number")->fetchAll();
+// ----- Get all rooms for the table -----
+$rooms = array();
+$result = $pdo->query("SELECT * FROM rooms ORDER BY room_number");
+while ($row = $result->fetch()) {
+    $rooms[] = $row;
+}
 
 $pageTitle = 'Room Management';
 $activePage = 'rooms';
@@ -67,24 +83,45 @@ require_once __DIR__ . '/../includes/header.php';
         <table class="data-table" id="roomsTable">
             <thead><tr><th>Room No.</th><th>Block</th><th>Floor</th><th>Type</th><th>Capacity</th><th>Occupied</th><th>Monthly Fee</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody>
-            <?php if (empty($rooms)): ?>
+            <?php if (count($rooms) === 0): ?>
                 <tr><td colspan="9"><div class="empty-state"><div class="icon">&#127968;</div><h4>No rooms yet</h4><p>Add a room to get started.</p></div></td></tr>
-            <?php else: foreach ($rooms as $r): ?>
+            <?php else: ?>
+                <?php foreach ($rooms as $r): ?>
                 <tr>
                     <td><?= e($r['room_number']) ?></td>
-                    <td><?= e($r['block'] ?: '-') ?></td>
-                    <td><?= e($r['floor_number'] ?: '-') ?></td>
+                    <td>
+                        <?php if ($r['block']) { echo e($r['block']); } else { echo '-'; } ?>
+                    </td>
+                    <td>
+                        <?php if ($r['floor_number']) { echo e($r['floor_number']); } else { echo '-'; } ?>
+                    </td>
                     <td><?= ucfirst(e($r['room_type'])) ?></td>
                     <td><?= $r['capacity'] ?></td>
                     <td><?= $r['occupied'] ?></td>
                     <td>$<?= number_format($r['monthly_fee'], 2) ?></td>
-                    <td><span class="badge <?= $r['status']==='available'?'badge-success':($r['status']==='full'?'badge-error':'badge-warning') ?>"><?= e($r['status']) ?></span></td>
+                    <td>
+                        <?php
+                        if ($r['status'] === 'available') {
+                            $statusClass = 'badge-success';
+                        } elseif ($r['status'] === 'full') {
+                            $statusClass = 'badge-error';
+                        } else {
+                            $statusClass = 'badge-warning';
+                        }
+                        ?>
+                        <span class="badge <?= $statusClass ?>"><?= e($r['status']) ?></span>
+                    </td>
                     <td class="actions">
                         <button class="btn btn-outline btn-sm" onclick='editRoom(<?= json_encode($r, JSON_HEX_APOS|JSON_HEX_QUOT) ?>)'>Edit</button>
-                        <form method="POST" style="display:inline" data-confirm="Delete this room?"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= $r['id'] ?>"><button class="btn btn-danger btn-sm">Delete</button></form>
+                        <form method="POST" style="display:inline" data-confirm="Delete this room?">
+                            <input type="hidden" name="action" value="delete">
+                            <input type="hidden" name="id" value="<?= $r['id'] ?>">
+                            <button class="btn btn-danger btn-sm">Delete</button>
+                        </form>
                     </td>
                 </tr>
-            <?php endforeach; endif; ?>
+                <?php endforeach; ?>
+            <?php endif; ?>
             </tbody>
         </table>
     </div>
@@ -112,7 +149,10 @@ require_once __DIR__ . '/../includes/header.php';
                 </div>
                 <div class="form-group"><label>Description</label><textarea name="description" class="form-control"></textarea></div>
             </div>
-            <div class="modal-footer"><button type="button" class="btn btn-outline" onclick="closeModal('addModal')">Cancel</button><button type="submit" class="btn btn-primary">Add Room</button></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeModal('addModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Add Room</button>
+            </div>
         </form>
     </div>
 </div>
@@ -140,7 +180,10 @@ require_once __DIR__ . '/../includes/header.php';
                 </div>
                 <div class="form-group"><label>Description</label><textarea name="description" id="edit_description" class="form-control"></textarea></div>
             </div>
-            <div class="modal-footer"><button type="button" class="btn btn-outline" onclick="closeModal('editModal')">Cancel</button><button type="submit" class="btn btn-primary">Save Changes</button></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeModal('editModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
         </form>
     </div>
 </div>
