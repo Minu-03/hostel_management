@@ -1,4 +1,4 @@
-        </main>
+</main>
         <footer class="app-footer">
             <p>&copy; <?= date('Y') ?> Hostel Management System. All rights reserved.</p>
         </footer>
