@@ -67,8 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </form>
 
         <div class="login-hint">
-            Default admin: <code>admin@hostel.com</code> / <code>admin123</code><br>
-            Student accounts are created by the admin.
+            Default admin: <code>admin@hostel.com</code> / <code>admin</code><br>
         </div>
     </div>
 </div>
