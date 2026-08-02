@@ -797,3 +797,9 @@ textarea {
     min-width: 100%;
   }
 }
+
+.login-link { display: block; text-align: center;
+  margin-top: 15px;
+  text-decoration: none;
+  color: #007bff;
+}
