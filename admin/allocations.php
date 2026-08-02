@@ -1,4 +1,5 @@
 <?php
+// admin/allocations.php
 require_once __DIR__ . '/../includes/auth.php';
 require_role('admin');
 $pdo = db();
@@ -35,6 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ->execute([$room_id]);
         $pdo->prepare("UPDATE students SET status='checked_in', check_in_date=? WHERE id=?")->execute([$date, $student_id]);
         $pdo->commit();
+
         set_flash('success', 'Room allocated successfully.');
         header('Location: ' . base_url('admin/allocations.php')); exit;
     }
@@ -56,14 +58,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+// Fetch allocations list
 $allocations = $pdo->query("SELECT a.*, s.full_name, s.student_number, r.room_number, r.block
                             FROM allocations a
                             JOIN students s ON a.student_id = s.id
                             JOIN rooms r ON a.room_id = r.id
                             ORDER BY a.allocated_date DESC")->fetchAll();
 
-$students = $pdo->query("SELECT id, student_number, full_name FROM students ORDER BY full_name")->fetchAll();
-$rooms   = $pdo->query("SELECT id, room_number, block, capacity, occupied FROM rooms WHERE status='available' ORDER BY room_number")->fetchAll();
+// Fetch students list (with gender attribute)
+$students = $pdo->query("SELECT id, student_number, full_name, gender FROM students ORDER BY full_name")->fetchAll();
+
+// Fetch only rooms that are available and have capacity left
+$rooms = $pdo->query("SELECT id, room_number, block, capacity, occupied, room_type
+                      FROM rooms
+                      WHERE status='available' AND occupied < capacity
+                      ORDER BY room_number")->fetchAll();
 
 $pageTitle = 'Room Allocations';
 $activePage = 'allocations';
@@ -109,28 +118,91 @@ require_once __DIR__ . '/../includes/header.php';
         <form method="POST" action="">
             <div class="modal-body">
                 <input type="hidden" name="action" value="allocate">
+
                 <div class="form-group">
-                    <label>Student *</label>
-                    <select name="student_id" required>
+                    <label for="student_select">Student *</label>
+                    <select name="student_id" id="student_select" required onchange="filterRooms()">
                         <option value="">Select student...</option>
                         <?php foreach ($students as $s): ?>
-                            <option value="<?= $s['id'] ?>"><?= e($s['student_number'] . ' - ' . $s['full_name']) ?></option>
+                            <option value="<?= $s['id'] ?>" data-gender="<?= htmlspecialchars($s['gender']) ?>">
+                                <?= e($s['student_number'] . ' - ' . $s['full_name'] . ' (' . ucfirst($s['gender']) . ')') ?>
+                            </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
+
                 <div class="form-group">
-                    <label>Room *</label>
-                    <select name="room_id" required>
-                        <option value="">Select room...</option>
-                        <?php foreach ($rooms as $r): ?>
-                            <option value="<?= $r['id'] ?>"><?= e($r['room_number'] . ' - Block ' . ($r['block'] ?: 'N/A') . ' (' . $r['occupied'] . '/' . $r['capacity'] . ')') ?></option>
-                        <?php endforeach; ?>
+                    <label for="preference_select">Room Type Preference *</label>
+                    <select id="preference_select" required onchange="filterRooms()">
+                        <option value="" disabled selected>Select room type preference...</option>
+                        <option value="single">Single Room (Floor 5)</option>
+                        <option value="double">Double Room (Floor 4)</option>
+                        <option value="triple">Triple Room (Floor 3)</option>
+                        <option value="dormitory">Dormitory (Floor 1 & 2)</option>
                     </select>
                 </div>
-                <div class="form-group"><label>Allocated Date *</label><input type="date" name="allocated_date" class="form-control" value="<?= date('Y-m-d') ?>" required></div>
+
+                <div class="form-group">
+                    <label for="room_select">Room * (Only shows available rooms matching preference & gender)</label>
+                    <select name="room_id" id="room_select" required>
+                        <option value="">Select room...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Allocated Date *</label>
+                    <input type="date" name="allocated_date" class="form-control" value="<?= date('Y-m-d') ?>" required>
+                </div>
             </div>
-            <div class="modal-footer"><button type="button" class="btn btn-outline" onclick="closeModal('allocModal')">Cancel</button><button type="submit" class="btn btn-primary">Allocate</button></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeModal('allocModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Allocate</button>
+            </div>
         </form>
     </div>
 </div>
+
+<script>
+// JSON list of all available rooms loaded once from server PHP
+const availableRooms = <?= json_encode($rooms) ?>;
+
+function filterRooms() {
+    const studentSelect = document.getElementById('student_select');
+    const selectedOption = studentSelect.options[studentSelect.selectedIndex];
+
+    // Get gender and map to block F/M
+    const gender = selectedOption ? selectedOption.getAttribute('data-gender') : '';
+    const block = (gender === 'female') ? 'F' : ((gender === 'male') ? 'M' : '');
+
+    // Get preferred room type
+    const preference = document.getElementById('preference_select').value;
+    const roomSelect = document.getElementById('room_select');
+
+    // Reset room options
+    roomSelect.innerHTML = '<option value="">Select room...</option>';
+
+    if (!block || !preference) {
+        return;
+    }
+
+    // Filter rooms matching block (gender) and room type
+    const filtered = availableRooms.filter(room => {
+        return room.block === block && room.room_type === preference;
+    });
+
+    if (filtered.length === 0) {
+        roomSelect.innerHTML = '<option value="">No rooms available for this match</option>';
+        return;
+    }
+
+    // Populate dropdown options
+    filtered.forEach(room => {
+        const option = document.createElement('option');
+        option.value = room.id;
+        option.innerText = `${room.room_number} (Occupancy: ${room.occupied}/${room.capacity})`;
+        roomSelect.appendChild(option);
+    });
+}
+</script>
+
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

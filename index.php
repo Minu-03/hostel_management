@@ -69,10 +69,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="login-hint">
             Default admin: <code>admin@hostel.com</code> / <code>admin</code><br>
         </div>
+        <div style="font-family: Arial; margin-top: 15px; text-align: center; font-size: 14px;">
+                    New student? Click <a href="<?= base_url('student/register.php') ?>" style="color: #007bff; font-family: Arial;">here</a> to register.
+        </div>
     </div>
-    <div style="margin-top: 15px; text-align: center; font-size: 14px;">
-            New student? Click <a href="register.php" style="color: #007bff; text-decoration: none; font-family: Arial, sans-serif;">here</a> to register.
-    </div>
+
 </div>
 </body>
 </html>

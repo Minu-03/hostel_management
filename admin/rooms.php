@@ -1,162 +1,93 @@
 <?php
+// admin/rooms.php
 require_once __DIR__ . '/../includes/auth.php';
 require_role('admin');
 $pdo = db();
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $action = $_POST['action'] ?? '';
+// Fetch block & floor from request
+$selectedBlock = $_GET['block'] ?? 'M';
+$selectedFloor = isset($_GET['floor']) ? (int)$_GET['floor'] : 1;
 
-    if ($action === 'create') {
-        $stmt = $pdo->prepare("INSERT INTO rooms (room_number, block, floor_number, capacity, room_type, monthly_fee, status, description)
-                               VALUES (?,?,?,?,?,?,?,?)");
-        $stmt->execute([
-            trim($_POST['room_number']),
-            trim($_POST['block'] ?? ''),
-            (int)($_POST['floor_number'] ?? 0),
-            (int)($_POST['capacity'] ?? 1),
-            $_POST['room_type'] ?? 'single',
-            (float)($_POST['monthly_fee'] ?? 0),
-            $_POST['status'] ?? 'available',
-            trim($_POST['description'] ?? '')
-        ]);
-        set_flash('success', 'Room added successfully.');
-        header('Location: ' . base_url('admin/rooms.php')); exit;
-    }
+// Fetch filtered rooms for blueprint
+$stmt = $pdo->prepare("SELECT * FROM rooms WHERE block = ? AND floor_number = ? ORDER BY room_number");
+$stmt->execute([$selectedBlock, $selectedFloor]);
+$rooms = $stmt->fetchAll();
 
-    if ($action === 'update') {
-        $stmt = $pdo->prepare("UPDATE rooms SET room_number=?, block=?, floor_number=?, capacity=?, room_type=?, monthly_fee=?, status=?, description=? WHERE id=?");
-        $stmt->execute([
-            trim($_POST['room_number']),
-            trim($_POST['block'] ?? ''),
-            (int)($_POST['floor_number'] ?? 0),
-            (int)($_POST['capacity'] ?? 1),
-            $_POST['room_type'] ?? 'single',
-            (float)($_POST['monthly_fee'] ?? 0),
-            $_POST['status'] ?? 'available',
-            trim($_POST['description'] ?? ''),
-            (int)($_POST['id'] ?? 0)
-        ]);
-        set_flash('success', 'Room updated successfully.');
-        header('Location: ' . base_url('admin/rooms.php')); exit;
-    }
-
-    if ($action === 'delete') {
-        $pdo->prepare("DELETE FROM rooms WHERE id=?")->execute([(int)($_POST['id'] ?? 0)]);
-        set_flash('success', 'Room deleted.');
-        header('Location: ' . base_url('admin/rooms.php')); exit;
-    }
-}
-
-$rooms = $pdo->query("SELECT * FROM rooms ORDER BY room_number")->fetchAll();
-
-$pageTitle = 'Room Management';
+$pageTitle = 'Room Grid Blueprint';
 $activePage = 'rooms';
 require_once __DIR__ . '/../includes/header.php';
 ?>
-<div class="toolbar">
-    <div class="toolbar-left">
-        <div class="search-box"><input type="text" placeholder="Search rooms..." data-table-search="roomsTable"></div>
-    </div>
-    <div class="toolbar-right">
-        <button class="btn btn-primary" onclick="openModal('addModal')">+ Add Room</button>
-    </div>
+<style>
+    .blueprint-controls { display: flex; gap: 20px; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 25px; align-items: center; }
+    .blueprint-controls label { font-weight: bold; margin-right: 8px; color: #444; }
+    .blueprint-controls select { padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+
+    .blueprint-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; margin-top: 20px; }
+    .room-card { background: #fff; border: 2px solid #ccc; border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: 0.2s; }
+    .room-card.available { border-color: #28a745; background-color: #e8f5e9; }
+    .room-card.full { border-color: #dc3545; background-color: #ffebee; }
+    .room-card.maintenance { border-color: #6c757d; background-color: #f5f5f5; }
+
+    .room-title { font-size: 1.2rem; font-weight: bold; margin-bottom: 5px; color: #333; }
+    .room-meta { font-size: 0.85rem; color: #666; margin-bottom: 8px; }
+    .room-badge { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; }
+    .badge-av { background: #d4edda; color: #155724; }
+    .badge-full { background: #f8d7da; color: #721c24; }
+    .badge-maint { background: #e2e3e5; color: #383d41; }
+</style>
+
+<div class="blueprint-controls">
+    <form method="GET" action="" style="display: flex; gap: 15px; width: 100%; align-items: center;">
+        <div>
+            <label for="block">Select Block:</label>
+            <select name="block" id="block" onchange="this.form.submit()">
+                <option value="M" <?= $selectedBlock === 'M' ? 'selected' : '' ?>>Male (Block M)</option>
+                <option value="F" <?= $selectedBlock === 'F' ? 'selected' : '' ?>>Female (Block F)</option>
+            </select>
+        </div>
+        <div>
+            <label for="floor">Select Floor:</label>
+            <select name="floor" id="floor" onchange="this.form.submit()">
+                <option value="1" <?= $selectedFloor === 1 ? 'selected' : '' ?>>Floor 1 (Dormitories)</option>
+                <option value="2" <?= $selectedFloor === 2 ? 'selected' : '' ?>>Floor 2 (Dormitories)</option>
+                <option value="3" <?= $selectedFloor === 3 ? 'selected' : '' ?>>Floor 3 (Triple Rooms)</option>
+                <option value="4" <?= $selectedFloor === 4 ? 'selected' : '' ?>>Floor 4 (Double Rooms)</option>
+                <option value="5" <?= $selectedFloor === 5 ? 'selected' : '' ?>>Floor 5 (Single Rooms)</option>
+            </select>
+        </div>
+        <div style="margin-left: auto; font-size: 14px; font-weight: bold; color: #555;">
+            Total Rooms Shown: <?= count($rooms) ?>
+        </div>
+    </form>
 </div>
 
-<div class="card">
-    <div class="table-wrap">
-        <table class="data-table" id="roomsTable">
-            <thead><tr><th>Room No.</th><th>Block</th><th>Floor</th><th>Type</th><th>Capacity</th><th>Occupied</th><th>Monthly Fee</th><th>Status</th><th>Actions</th></tr></thead>
-            <tbody>
-            <?php if (empty($rooms)): ?>
-                <tr><td colspan="9"><div class="empty-state"><div class="icon">&#127968;</div><h4>No rooms yet</h4><p>Add a room to get started.</p></div></td></tr>
-            <?php else: foreach ($rooms as $r): ?>
-                <tr>
-                    <td><?= e($r['room_number']) ?></td>
-                    <td><?= e($r['block'] ?: '-') ?></td>
-                    <td><?= e($r['floor_number'] ?: '-') ?></td>
-                    <td><?= ucfirst(e($r['room_type'])) ?></td>
-                    <td><?= $r['capacity'] ?></td>
-                    <td><?= $r['occupied'] ?></td>
-                    <td>$<?= number_format($r['monthly_fee'], 2) ?></td>
-                    <td><span class="badge <?= $r['status']==='available'?'badge-success':($r['status']==='full'?'badge-error':'badge-warning') ?>"><?= e($r['status']) ?></span></td>
-                    <td class="actions">
-                        <button class="btn btn-outline btn-sm" onclick='editRoom(<?= json_encode($r, JSON_HEX_APOS|JSON_HEX_QUOT) ?>)'>Edit</button>
-                        <form method="POST" style="display:inline" data-confirm="Delete this room?"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= $r['id'] ?>"><button class="btn btn-danger btn-sm">Delete</button></form>
-                    </td>
-                </tr>
-            <?php endforeach; endif; ?>
-            </tbody>
-        </table>
-    </div>
-</div>
-
-<!-- Add Modal -->
-<div class="modal-overlay" id="addModal">
-    <div class="modal modal-lg">
-        <div class="modal-header"><h3>Add New Room</h3><button class="modal-close" onclick="closeModal('addModal')">&times;</button></div>
-        <form method="POST" action="">
-            <div class="modal-body">
-                <input type="hidden" name="action" value="create">
-                <div class="form-row">
-                    <div class="form-group"><label>Room Number *</label><input type="text" name="room_number" class="form-control" required></div>
-                    <div class="form-group"><label>Block</label><input type="text" name="block" class="form-control"></div>
-                </div>
-                <div class="form-row-3">
-                    <div class="form-group"><label>Floor</label><input type="number" name="floor_number" class="form-control" min="0"></div>
-                    <div class="form-group"><label>Capacity *</label><input type="number" name="capacity" class="form-control" value="1" min="1" required></div>
-                    <div class="form-group"><label>Monthly Fee *</label><input type="number" name="monthly_fee" class="form-control" value="0.00" step="0.01" required></div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group"><label>Room Type</label><select name="room_type"><option value="single">Single</option><option value="double">Double</option><option value="triple">Triple</option><option value="dormitory">Dormitory</option></select></div>
-                    <div class="form-group"><label>Status</label><select name="status"><option value="available">Available</option><option value="maintenance">Maintenance</option></select></div>
-                </div>
-                <div class="form-group"><label>Description</label><textarea name="description" class="form-control"></textarea></div>
+<h3 style="margin-bottom: 10px;">Floor Layout Overview</h3>
+<div class="blueprint-grid">
+    <?php if (empty($rooms)): ?>
+        <div style="grid-column: 1 / -1; text-align: center; color: #888; padding: 40px;">No rooms found in Block <?= htmlspecialchars($selectedBlock) ?> Floor <?= $selectedFloor ?>.</div>
+    <?php else: foreach ($rooms as $r):
+        $isFull = ($r['occupied'] >= $r['capacity']) || ($r['status'] === 'full');
+        $isMaint = ($r['status'] === 'maintenance');
+        $cardClass = $isMaint ? 'maintenance' : ($isFull ? 'full' : 'available');
+    ?>
+        <div class="room-card <?= $cardClass ?>">
+            <div class="room-title"><?= e($r['room_number']) ?></div>
+            <div class="room-meta">
+                Type: <strong><?= ucfirst(e($r['room_type'])) ?></strong><br>
+                Occupied: <strong><?= $r['occupied'] ?>/<?= $r['capacity'] ?></strong><br>
+                Rate: <strong>Rs. <?= number_format($r['monthly_fee']) ?></strong>
             </div>
-            <div class="modal-footer"><button type="button" class="btn btn-outline" onclick="closeModal('addModal')">Cancel</button><button type="submit" class="btn btn-primary">Add Room</button></div>
-        </form>
-    </div>
-</div>
-
-<!-- Edit Modal -->
-<div class="modal-overlay" id="editModal">
-    <div class="modal modal-lg">
-        <div class="modal-header"><h3>Edit Room</h3><button class="modal-close" onclick="closeModal('editModal')">&times;</button></div>
-        <form method="POST" action="">
-            <div class="modal-body">
-                <input type="hidden" name="action" value="update">
-                <input type="hidden" name="id" id="edit_id">
-                <div class="form-row">
-                    <div class="form-group"><label>Room Number *</label><input type="text" name="room_number" id="edit_room_number" class="form-control" required></div>
-                    <div class="form-group"><label>Block</label><input type="text" name="block" id="edit_block" class="form-control"></div>
-                </div>
-                <div class="form-row-3">
-                    <div class="form-group"><label>Floor</label><input type="number" name="floor_number" id="edit_floor_number" class="form-control" min="0"></div>
-                    <div class="form-group"><label>Capacity *</label><input type="number" name="capacity" id="edit_capacity" class="form-control" min="1" required></div>
-                    <div class="form-group"><label>Monthly Fee *</label><input type="number" name="monthly_fee" id="edit_monthly_fee" class="form-control" step="0.01" required></div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group"><label>Room Type</label><select name="room_type" id="edit_room_type"><option value="single">Single</option><option value="double">Double</option><option value="triple">Triple</option><option value="dormitory">Dormitory</option></select></div>
-                    <div class="form-group"><label>Status</label><select name="status" id="edit_status"><option value="available">Available</option><option value="full">Full</option><option value="maintenance">Maintenance</option></select></div>
-                </div>
-                <div class="form-group"><label>Description</label><textarea name="description" id="edit_description" class="form-control"></textarea></div>
+            <div>
+                <?php if ($isMaint): ?>
+                    <span class="room-badge badge-maint">Maintenance</span>
+                <?php elseif ($isFull): ?>
+                    <span class="room-badge badge-full">Full</span>
+                <?php else: ?>
+                    <span class="room-badge badge-av">Available</span>
+                <?php endif; ?>
             </div>
-            <div class="modal-footer"><button type="button" class="btn btn-outline" onclick="closeModal('editModal')">Cancel</button><button type="submit" class="btn btn-primary">Save Changes</button></div>
-        </form>
-    </div>
+        </div>
+    <?php endforeach; endif; ?>
 </div>
 
-<script>
-function editRoom(r) {
-    document.getElementById('edit_id').value = r.id;
-    document.getElementById('edit_room_number').value = r.room_number;
-    document.getElementById('edit_block').value = r.block || '';
-    document.getElementById('edit_floor_number').value = r.floor_number || '';
-    document.getElementById('edit_capacity').value = r.capacity;
-    document.getElementById('edit_monthly_fee').value = r.monthly_fee;
-    document.getElementById('edit_room_type').value = r.room_type;
-    document.getElementById('edit_status').value = r.status;
-    document.getElementById('edit_description').value = r.description || '';
-    openModal('editModal');
-}
-</script>
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

@@ -1,5 +1,6 @@
 <?php
 // 1. Connection Configuration
+require_once __DIR__ . '/../includes/auth.php';
 $host = 'localhost';
 $dbname = 'hostel_management';
 $db_user = 'root';
@@ -18,6 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $phone          = trim($_POST['phone']);
     $course         = trim($_POST['course']);
     $year_of_study  = intval($_POST['year_of_study']);
+
 
     if (empty($student_number) || empty($full_name) || empty($email) || empty($password)) {
         $error = "Please fill in all required fields.";
@@ -152,7 +154,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <button type="submit">Register Account</button>
         </form>
 
-        <a href="login.php" class="login-link">Already have an account? Log In</a>
+        Already have an account?<a href="student/login.php" class="login-link"> Log In</a>
     </div>
 </div>
 
