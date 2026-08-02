@@ -70,7 +70,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             Default admin: <code>admin@hostel.com</code> / <code>admin</code><br>
         </div>
     </div>
-    <!-- Registration Link -->
     <div style="margin-top: 15px; text-align: center; font-size: 14px;">
             New student? Click <a href="register.php" style="color: #007bff; text-decoration: none; font-family: Arial, sans-serif;">here</a> to register.
     </div>
